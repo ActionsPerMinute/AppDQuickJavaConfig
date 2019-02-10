@@ -1,0 +1,165 @@
+<html>
+<head>
+	<LINK REL=StyleSheet HREF="style.css" TYPE="text/css" />
+    <script
+  src="https://code.jquery.com/jquery-3.3.1.min.js"
+  integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+  crossorigin="anonymous"></script>
+    <script src='https://github.com/carhartl/jquery-cookie/releases/download/v1.4.1/jquery.cookie-1.4.1.min.js'></script>
+    <script>
+
+	//https://www.abeautifulsite.net/parsing-urls-in-javascript
+	function parseURL(url) {
+		var regex = /^(https?:\/\/)?([^\/:]*)(:[0-9]*)?/g
+		var match = regex.exec(url);
+		return {
+				protocol: match[1],
+				host: match[2],
+				port: match[3]
+		}
+
+
+		var parser = document.createElement('a'),
+			searchObject = {},
+			queries, split, i;
+		// Let the browser do the work
+		parser.href = url;
+		// Convert query string to object
+		queries = parser.search.replace(/^\?/, '').split('&');
+		for( i = 0; i < queries.length; i++ ) {
+			split = queries[i].split('=');
+			searchObject[split[0]] = split[1];
+		}
+		return {
+			protocol: parser.protocol,
+			host: parser.host,
+			hostname: parser.hostname,
+			port: parser.port,
+			pathname: parser.pathname,
+			search: parser.search,
+			searchObject: searchObject,
+			hash: parser.hash
+		};
+	}
+
+	var jMap= {
+				'host': '-Dappdynamics.controller.hostName=',
+				'port': '-Dappdynamics.controller.port=',
+				'application': '-Dappdynamics.agent.applicationName=',
+				'tier': '-Dappdynamics.agent.tierName=',
+				'reuse': '-Dappdynamics.agent.reuse.nodeName=true -Dappdynamics.agent.reuse.nodeName.prefix=',
+				'node': '-Dappdynamics.agent.nodeName=',
+				'uniqueid': '-Dappdynamics.agent.uniqueHostId=',
+				'retrans': '-Dappdynamics.agent.disable.retransformation=true',
+				'ssl': '-Dappdynamics.controller.ssl.enabled=true',
+				'key': '-Dappdynamics.agent.accountAccessKey=',
+				'agent': '-javaagent:',
+				'maxMetrics': '-Dappdynamics.agent.maxMetrics='
+    }
+
+	console.log(jMap['agent'], jMap['host'])
+		function Evalu() {
+            var optstr = ''
+			var exc = []
+			for ( opt in jMap ) {
+				// check that one of the options has not been exculded by another option
+				if ( !exc.includes(opt) )
+				if ( $('#'+opt ).val() !== undefined )
+					if ( $('#'+opt+':text' ).val() !== undefined && $('#'+opt+':text' ).val().trim() != '' )
+						// add the option then the value
+						if ( opt == 'host' ) {
+							var conndetails = parseURL($('#'+opt+':text' ).val().trim());
+							if ( conndetails.host !== undefined ) optstr += jMap['host'] + conndetails.host + ' '
+							if ( conndetails.protocol !== undefined) {
+							    exc.push('ssl')
+								$('#ssl').attr("disabled", "disabled");
+								if (conndetails.protocol == 'https://') {
+									optstr += jMap['ssl'] + ' '
+									$('#ssl').attr("checked", "true")
+								} else {
+									$('#ssl').removeAttr("checked")
+								}
+							} else { 
+								$('#ssl').removeAttr("disabled");
+							}
+							if ( conndetails.port !== undefined ) {
+                                exc.push('port')
+                                $('#port').attr("disabled", "disabled");
+                                 optstr += jMap['port'] + conndetails.port.substring(1) + ' '
+                            } else {
+                                $('#port').removeAttr("disabled");
+                            }
+						} else {
+							optstr += jMap[opt]+$('#'+opt ).val().trim() + ' '
+						}
+					else if ( $('#'+opt+':checkbox' ).prop('checked') )
+					    // special rule for node name reuse exludes adding the node name
+						if( opt == 'reuse' && $('#node').val() !== undefined &&  $('#node').val().trim() != '') {
+							optstr += jMap[opt]+$('#node').val().trim() + ' '
+							exc.push('node')
+						} else {
+							optstr += jMap[opt] + ' '
+						}
+			}
+			$('.contact > p' ).html(optstr)
+		}
+
+		function loadcook() {
+			var c = $.cookie()
+		    for (k in c)
+		    {
+ 			   $('#'+c[k].name).val(decodeURI(c[k].value))
+		    }
+		}
+
+		//add to change on input
+		document.addEventListener('DOMContentLoaded', function() {
+		    loadcook() 
+			$('input').change(Evalu)
+			$('input').change(function(){
+        		$.cookie(this.name, encodeURI(this.value));
+    		});
+		}, false);
+
+	</script>
+</head>
+
+<body>
+<h1>AppDynamics Quick Java Configuration</h1>
+
+<form class="login" action="" method="post"> 
+    <div><label for="agent">Java Agent Location</label>
+      <input type="text" name="agent" id="agent"></div>
+    <div><label for="host">Host</label>
+      <input type="text" name="host" id="host"></div>
+    <div><label for="ssl">Ssl</label>
+      <input type="checkbox" name="ssl" id="ssl"></div>
+    <div><label for="port">Port</label>
+      <input type="text" name="port" id="port" value="8090"></div>
+    <div><label for="application">Application Name</label>
+      <input type="text" name="application" id="application"></div>
+ 
+<div><label for="tier">Tier Name</label>
+      <input type="text" name="tier" id="tier"></div>
+ 
+<div><label for="node">Node Name / Node prefix</label>
+      <input type="text" name="node" id="node"></div>
+  
+<div><label for="reuse">Node Name Re-use</label>
+      <input type="checkbox" name="reuse" id="reuse"></div>
+ 
+
+<div><label for="key">Access Key</label>
+      <input type="text" name="key" id="key"></div>
+<div><label for="key">MaxMetrics</label>
+      <input type="text" name="MaxMetrics" id="MaxMetrics"></div>
+    <!--div class="actions">
+      <input type="submit" name="login" value="Login"> <a href="/forgot">I forgot my password</a>
+    </div-->
+</form>
+
+<div class="contact">
+  <p>Generated Java Parameter String</p>
+</div>
+</body>
+</html>
